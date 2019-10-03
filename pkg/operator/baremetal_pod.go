@@ -7,7 +7,6 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var baremetalConfigmap = "metal3-config"
 var sharedVolume = "metal3-shared"
 
 var volumes = []corev1.Volume{
@@ -26,17 +25,10 @@ var volumeMounts = []corev1.VolumeMount{
 	},
 }
 
-func setEnvVar(name string, key string) corev1.EnvVar {
+func setEnvVar(name string, value string) corev1.EnvVar {
 	return corev1.EnvVar{
-		Name: name,
-		ValueFrom: &corev1.EnvVarSource{
-			ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: baremetalConfigmap,
-				},
-				Key: key,
-			},
-		},
+		Name:  name,
+		Value: value,
 	}
 }
 
@@ -141,7 +133,7 @@ func newMetal3InitContainers(config *OperatorConfig) []corev1.Container {
 			},
 			VolumeMounts: volumeMounts,
 			Env: []corev1.EnvVar{
-				setEnvVar("CACHEURL", "cache_url"),
+				setEnvVar("CACHEURL", config.BaremetalConfig.CacheUrl),
 			},
 		},
 	}
@@ -161,8 +153,8 @@ func createInitContainerRhcosDownloader(config *OperatorConfig) corev1.Container
 		},
 		VolumeMounts: volumeMounts,
 		Env: []corev1.EnvVar{
-			setEnvVar("RHCOS_IMAGE_URL", "rhcos_image_url"),
-			setEnvVar("CACHEURL", "cache_url"),
+			setEnvVar("RHCOS_IMAGE_URL", config.BaremetalConfig.RhcosImageUrl),
+			setEnvVar("CACHEURL", config.BaremetalConfig.CacheUrl),
 		},
 	}
 	return initContainer
@@ -178,8 +170,8 @@ func createInitContainerStaticIpSet(config *OperatorConfig) corev1.Container {
 			Privileged: pointer.BoolPtr(true),
 		},
 		Env: []corev1.EnvVar{
-			setEnvVar("PROVISIONING_IP", "provisioning_ip"),
-			setEnvVar("PROVISIONING_INTERFACE", "provisioning_interface"),
+			setEnvVar("PROVISIONING_IP", config.BaremetalConfig.ProvisioningIp),
+			setEnvVar("PROVISIONING_INTERFACE", config.BaremetalConfig.ProvisioningInterface),
 		},
 	}
 	return initContainer
@@ -220,10 +212,10 @@ func newMetal3Containers(config *OperatorConfig) []corev1.Container {
 					Name:  "OPERATOR_NAME",
 					Value: "baremetal-operator",
 				},
-				setEnvVar("DEPLOY_KERNEL_URL", "deploy_kernel_url"),
-				setEnvVar("DEPLOY_RAMDISK_URL", "deploy_ramdisk_url"),
-				setEnvVar("IRONIC_ENDPOINT", "ironic_endpoint"),
-				setEnvVar("IRONIC_INSPECTOR_ENDPOINT", "ironic_inspector_endpoint"),
+				setEnvVar("DEPLOY_KERNEL_URL", config.BaremetalConfig.DeployKernelUrl),
+				setEnvVar("DEPLOY_RAMDISK_URL", config.BaremetalConfig.DeployRamdiskUrl),
+				setEnvVar("IRONIC_ENDPOINT", config.BaremetalConfig.IronicEndpoint),
+				setEnvVar("IRONIC_INSPECTOR_ENDPOINT", config.BaremetalConfig.IronicInspectorEndpoint),
 			},
 		},
 	}
@@ -249,9 +241,9 @@ func createContainerMetal3Dnsmasq(config *OperatorConfig) corev1.Container {
 		Command:      []string{"/bin/rundnsmasq"},
 		VolumeMounts: volumeMounts,
 		Env: []corev1.EnvVar{
-			setEnvVar("HTTP_PORT", "http_port"),
-			setEnvVar("PROVISIONING_INTERFACE", "provisioning_interface"),
-			setEnvVar("DHCP_RANGE", "dhcp_range"),
+			setEnvVar("HTTP_PORT", config.BaremetalConfig.HttpPort),
+			setEnvVar("PROVISIONING_INTERFACE", config.BaremetalConfig.HttpPort),
+			setEnvVar("DHCP_RANGE", config.BaremetalConfig.DhcpRange),
 		},
 	}
 	return container
@@ -287,8 +279,8 @@ func createContainerMetal3Httpd(config *OperatorConfig) corev1.Container {
 		Command:      []string{"/bin/runhttpd"},
 		VolumeMounts: volumeMounts,
 		Env: []corev1.EnvVar{
-			setEnvVar("HTTP_PORT", "http_port"),
-			setEnvVar("PROVISIONING_INTERFACE", "provisioning_interface"),
+			setEnvVar("HTTP_PORT", config.BaremetalConfig.HttpPort),
+			setEnvVar("PROVISIONING_INTERFACE", config.BaremetalConfig.ProvisioningInterface),
 		},
 	}
 	return container
@@ -307,8 +299,8 @@ func createContainerMetal3IronicConductor(config *OperatorConfig) corev1.Contain
 		VolumeMounts: volumeMounts,
 		Env: []corev1.EnvVar{
 			setMariadbPassword(),
-			setEnvVar("HTTP_PORT", "http_port"),
-			setEnvVar("PROVISIONING_INTERFACE", "provisioning_interface"),
+			setEnvVar("HTTP_PORT", config.BaremetalConfig.HttpPort),
+			setEnvVar("PROVISIONING_INTERFACE", config.BaremetalConfig.ProvisioningInterface),
 		},
 	}
 	return container
@@ -327,8 +319,8 @@ func createContainerMetal3IronicApi(config *OperatorConfig) corev1.Container {
 		VolumeMounts: volumeMounts,
 		Env: []corev1.EnvVar{
 			setMariadbPassword(),
-			setEnvVar("HTTP_PORT", "http_port"),
-			setEnvVar("PROVISIONING_INTERFACE", "provisioning_interface"),
+			setEnvVar("HTTP_PORT", config.BaremetalConfig.HttpPort),
+			setEnvVar("PROVISIONING_INTERFACE", config.BaremetalConfig.ProvisioningInterface),
 		},
 	}
 	return container
@@ -345,7 +337,7 @@ func createContainerMetal3IronicInspector(config *OperatorConfig) corev1.Contain
 		},
 		VolumeMounts: volumeMounts,
 		Env: []corev1.EnvVar{
-			setEnvVar("PROVISIONING_INTERFACE", "provisioning_interface"),
+			setEnvVar("PROVISIONING_INTERFACE", config.BaremetalConfig.ProvisioningInterface),
 		},
 	}
 	return container
@@ -362,8 +354,8 @@ func createContainerMetal3StaticIpManager(config *OperatorConfig) corev1.Contain
 			Privileged: pointer.BoolPtr(true),
 		},
 		Env: []corev1.EnvVar{
-			setEnvVar("PROVISIONING_IP", "provisioning_ip"),
-			setEnvVar("PROVISIONING_INTERFACE", "provisioning_interface"),
+			setEnvVar("PROVISIONING_IP", config.BaremetalConfig.ProvisioningIp),
+			setEnvVar("PROVISIONING_INTERFACE", config.BaremetalConfig.ProvisioningInterface),
 		},
 	}
 	return container

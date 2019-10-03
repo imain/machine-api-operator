@@ -23,6 +23,7 @@ type OperatorConfig struct {
 	TargetNamespace      string `json:"targetNamespace"`
 	Controllers          Controllers
 	BaremetalControllers BaremetalControllers
+	BaremetalConfig      BaremetalConfig
 }
 
 type Controllers struct {
@@ -56,6 +57,20 @@ type Images struct {
 	BaremetalIpaDownloader   string `json:"baremetalIpaDownloader"`
 	BaremetalRhcosDownloader string `json:"baremetalRhcosDownloader"`
 	BaremetalStaticIpManager string `json:"baremetalStaticIpManager"`
+}
+
+// Config needed for metal3 pod
+type BaremetalConfig struct {
+	HttpPort                string
+	ProvisioningInterface   string
+	ProvisioningIp          string
+	DhcpRange               string
+	DeployKernelUrl         string
+	DeployRamdiskUrl        string
+	IronicEndpoint          string
+	IronicInspectorEndpoint string
+	CacheUrl                string
+	RhcosImageUrl           string
 }
 
 func getProviderFromInfrastructure(infra *configv1.Infrastructure) (configv1.PlatformType, error) {
@@ -119,4 +134,23 @@ func getMachineAPIOperatorFromImages(images Images) (string, error) {
 		return "", fmt.Errorf("failed gettingMachineAPIOperator image. It is empty")
 	}
 	return images.MachineAPIOperator, nil
+}
+
+func getBaremetalConfigFromInfrastructure(infra *configv1.Infrastructure, usingBareMetal bool) BaremetalConfig {
+	if !usingBareMetal {
+		return BaremetalConfig{}
+	}
+
+	return BaremetalConfig{
+		HttpPort:                infra.BareMetal.HttpPort,
+		ProvisioningInterface:   infra.BareMetal.ProvisioningInterface,
+		ProvisioningIp:          infra.BareMetal.ProvisioningIp,
+		DhcpRange:               infra.BareMetal.DhcpRange,
+		DeployKernelUrl:         infra.BareMetal.DeployKernelUrl,
+		DeployRamdiskUrl:        infra.BareMetal.DeployRamdiskUrl,
+		IronicEndpoint:          infra.BareMetal.IronicEndpoint,
+		IronicInspectorEndpoint: infra.BareMetal.IronicInspectorEndpoint,
+		CacheUrl:                infra.BareMetal.CacheUrl,
+		RhcosImageUrl:           infra.BareMetal.RhcosImageUrl,
+	}
 }
